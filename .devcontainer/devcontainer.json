@@ -7,6 +7,9 @@
     "-p", "8080:8080",
     "-p", "5005:5005"
   ],
+  "containerEnv": {
+    "DB_HOST": "host.containers.internal"
+  },
   "mounts": [
     "source=quarkus-maven-repo,target=/home/vscode/.m2,type=volume"
   ],

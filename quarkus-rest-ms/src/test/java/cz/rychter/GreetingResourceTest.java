@@ -1,20 +1,19 @@
 package cz.rychter;
 
-import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
-import static io.restassured.RestAssured.given;
-import static org.hamcrest.CoreMatchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@QuarkusTest
+/**
+ * Pure Unit Test for GreetingResource.
+ * Executed during 'mvn test'. Runs instantly without starting Quarkus or PostgreSQL.
+ */
 class GreetingResourceTest {
-    @Test
-    void testHelloEndpoint() {
-        given()
-          .when().get("/hello")
-          .then()
-             .statusCode(200)
-             .body(is("Hello from Quarkus REST"));
-    }
 
+    @Test
+    void testHello() {
+        GreetingResource resource = new GreetingResource();
+        String result = resource.hello();
+        assertEquals("Hello from Quarkus REST", result);
+    }
 }
