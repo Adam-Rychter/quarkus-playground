@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app:
+    image: mcr.microsoft.com/devcontainers/java:1-21-bookworm
+    volumes:
+      - ..:/IdeaProjects/quarkus-playground:cached
+      - quarkus-maven-repo:/home/vscode/.m2
+    command: sleep infinity
+    ports:
+      - "8080:8080"
+      - "5005:5005"
+    depends_on:
+      - postgres
+    environment:
+      - DB_HOST=postgres
+
+  postgres:
+    image: docker.io/library/postgres:16-alpine
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: quarkus
+      POSTGRES_PASSWORD: quarkus
+      POSTGRES_DB: quarkus_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  quarkus-maven-repo:
+  postgres-data:

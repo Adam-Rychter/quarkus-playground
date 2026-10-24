@@ -1,0 +1,14 @@
+{
+  "name": "Quarkus Playground (Java 21)",
+  "image": "mcr.microsoft.com/devcontainers/java:1-21-bookworm",
+  "appPort": [8080, 5005],
+  "forwardPorts": [8080, 5005],
+  "runArgs": [
+    "-p", "8080:8080",
+    "-p", "5005:5005"
+  ],
+  "mounts": [
+    "source=quarkus-maven-repo,target=/home/vscode/.m2,type=volume"
+  ],
+  "remoteUser": "vscode"
+}
