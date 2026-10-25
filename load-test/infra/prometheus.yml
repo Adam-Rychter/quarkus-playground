@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 2s
+
+scrape_configs:
+  - job_name: quarkus
+    metrics_path: /q/metrics
+    static_configs:
+      - targets: ['lt-app:8080']
+  - job_name: postgres
+    static_configs:
+      - targets: ['lt-pgexporter:9187']

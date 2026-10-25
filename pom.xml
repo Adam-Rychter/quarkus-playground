@@ -8,6 +8,7 @@
 
     <modules>
         <module>quarkus-rest-ms</module>
+        <module>load-test</module>
     </modules>
 
     <properties>

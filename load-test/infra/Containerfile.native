@@ -1,0 +1,7 @@
+# Build context: quarkus-rest-ms/  (after ./mvnw package -Dnative ...)
+FROM quay.io/quarkus/ubi9-quarkus-micro-image:2.0
+WORKDIR /work/
+COPY target/*-runner /work/application
+RUN chmod 775 /work /work/application
+EXPOSE 8080
+CMD ["./application", "-Dquarkus.http.host=0.0.0.0"]

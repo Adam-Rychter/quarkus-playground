@@ -7,6 +7,7 @@ A multi-module enterprise playground exploring **Quarkus 3.40.x**, **Java 21 Vir
 ## Modules
 
 - **[`quarkus-rest-ms/`](file:///home/adam/IdeaProjects/quarkus-playground/quarkus-rest-ms)**: Primary REST microservice implementing ISO 20022 / MiFIR stock trade transaction reporting, virtual thread concurrency, Agroal pool management, and enterprise-separated unit & integration tests.
+- **[`load-test/`](file:///home/adam/IdeaProjects/quarkus-playground/load-test)**: Gatling load tests, Prometheus/Grafana dashboards and JVM vs native comparison tooling.
 
 ---
 

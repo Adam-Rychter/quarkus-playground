@@ -8,6 +8,7 @@ Welcome to the **Quarkus Playground** repository. This document serves as instru
 
 - **Project Type:** Multi-module Maven project.
   - Root: [`pom.xml`](file:///home/adam/IdeaProjects/quarkus-playground/pom.xml) manages common properties, compiler configurations, and child modules.
+  - Load-test Module: [`load-test/`](file:///home/adam/IdeaProjects/quarkus-playground/load-test) (Gatling simulations + Podman-based Prometheus/Grafana stack; see its README).
   - Active Module: [`quarkus-rest-ms/`](file:///home/adam/IdeaProjects/quarkus-playground/quarkus-rest-ms) (Quarkus REST microservice).
 - **Runtime & Language:** Java 21 (LTS) targeting OpenJDK 21.
 - **Framework:** Quarkus 3.40.x (Hibernate ORM with Panache, Narayana JTA, Agroal Connection Pool, Jackson, RESTEasy Reactive / Quarkus REST, Hibernate Validator).
@@ -57,6 +58,7 @@ When adding or modifying code in this repository, adhere to the following princi
 │   └── docker-compose.yml       # Multi-service compose (app + postgres)
 ├── mvnw, mvnw.cmd, .mvn/         # Maven wrapper files (root level)
 ├── pom.xml                      # Parent POM (declares modules)
+├── load-test/                   # Gatling simulations, loadtest.sh, Containerfiles, Prometheus/Grafana config
 └── quarkus-rest-ms/
     ├── pom.xml                  # Microservice dependencies & Quarkus plugin
     ├── src/main/java/cz/rychter/
@@ -117,7 +119,14 @@ java -jar quarkus-rest-ms/target/quarkus-app/quarkus-run.jar
   ./mvnw verify -pl quarkus-rest-ms
   ```
 
-### D. Managing Podman Infrastructure
+### D. Load Testing (JVM vs Native)
+```bash
+./load-test/loadtest.sh build all && ./load-test/loadtest.sh infra
+./load-test/loadtest.sh app jvm        # or native
+./load-test/loadtest.sh run Load       # Smoke|Load|Stress|Spike|Soak|PoolExhaustion|DuplicateRace
+```
+
+### E. Managing Podman Infrastructure
 - **Verify Podman Socket:**
   ```bash
   systemctl --user status podman.socket
@@ -144,4 +153,5 @@ java -jar quarkus-rest-ms/target/quarkus-app/quarkus-run.jar
 | `GET` | `/api/v1/trades/tx/{transactionId}` | Fetches trade by Unique Trade Identifier (UTI) | Trade JSON (`200 OK`) |
 | `GET` | `/api/v1/trades` | Lists recent trades (query params `page`, `limit`) | Array of Trade JSON (`200 OK`) |
 | `GET` | `/q/dev-ui` | Quarkus Dev UI dashboard | HTML Application |
+| `GET` | `/q/metrics` | Micrometer/Prometheus metrics (JVM, HTTP, Agroal) | Prometheus text |
 | `GET` | `/q/health` | Application health status (when health extension enabled) | JSON |
