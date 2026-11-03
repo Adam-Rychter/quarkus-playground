@@ -9,6 +9,7 @@
     <modules>
         <module>quarkus-rest-ms</module>
         <module>load-test</module>
+        <module>testing-java</module>
     </modules>
 
     <properties>

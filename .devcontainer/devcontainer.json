@@ -1,17 +1,10 @@
 {
   "name": "Quarkus Playground (Java 21)",
-  "image": "mcr.microsoft.com/devcontainers/java:1-21-bookworm",
-  "appPort": [8080, 5005],
-  "forwardPorts": [8080, 5005],
-  "runArgs": [
-    "-p", "8080:8080",
-    "-p", "5005:5005"
-  ],
-  "containerEnv": {
-    "DB_HOST": "host.containers.internal"
-  },
-  "mounts": [
-    "source=quarkus-maven-repo,target=/home/vscode/.m2,type=volume"
-  ],
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "runServices": ["app", "postgres"],
+  "workspaceFolder": "/IdeaProjects/quarkus-playground",
+  "shutdownAction": "stopCompose",
+  "forwardPorts": [8080, 5005, 5432],
   "remoteUser": "vscode"
 }

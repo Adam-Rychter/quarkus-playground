@@ -11,7 +11,8 @@ Welcome to the **Quarkus Playground** repository. This document serves as instru
   - Load-test Module: [`load-test/`](file:///home/adam/IdeaProjects/quarkus-playground/load-test) (Gatling simulations + Podman-based Prometheus/Grafana stack; see its README).
   - Active Module: [`quarkus-rest-ms/`](file:///home/adam/IdeaProjects/quarkus-playground/quarkus-rest-ms) (Quarkus REST microservice).
 - **Runtime & Language:** Java 21 (LTS) targeting OpenJDK 21.
-- **Framework:** Quarkus 3.40.x (Hibernate ORM with Panache, Narayana JTA, Agroal Connection Pool, Jackson, RESTEasy Reactive / Quarkus REST, Hibernate Validator).
+- **Framework:** Quarkus 3.40.x (RESTEasy Reactive / Quarkus REST, Hibernate ORM with Panache, Narayana JTA, Agroal Connection Pool, Hibernate Validator, Micrometer Prometheus).
+- **Concurrency Model:** Request handlers use Java 21 Virtual Threads via `@RunOnVirtualThread` on REST resource methods.
 - **Database:** PostgreSQL 16 running via Podman containerization.
 - **Dev Container:** Standardized Java 21 devcontainer environment with Podman socket integration.
 
@@ -25,7 +26,7 @@ When adding or modifying code in this repository, adhere to the following princi
 - **Repository Pattern:** Prefer `PanacheRepository<Entity>` over Active Record (`PanacheEntity`) to keep entities clean, decoupled from framework inheritance, and compliant with enterprise architectural standards.
 - **Entities:** Use standard Jakarta Persistence (`@Entity`, `@Table`, `@Id`, `@GeneratedValue(strategy = GenerationType.IDENTITY)`, `@Column`, `@Index`).
 - **DTOs / Records:** Expose immutable Java `record` classes with Jakarta Bean Validation constraints (`@NotBlank`, `@Pattern`, `@DecimalMin`, `@NotNull`) for request and response payloads; do not directly leak JPA entities over REST endpoints.
-- **Constructor Injection:** Use constructor injection (`@Inject public MyResource(MyRepository repo)`) on resource classes to enable clean Mockito instantiation in unit tests without reflection or framework containers.
+- **Injection Style:** For resources with unit-test coverage, use constructor injection (`@Inject public MyResource(MyRepository repo)`) so tests can instantiate resources directly with Mockito. Keep the explicit no-arg constructor where CDI proxying requires it (example: `TradeTransactionResource`).
 
 ### B. Testing Architecture & Separation Standards
 - **Unit Tests (`*Test.java`):**
@@ -38,7 +39,7 @@ When adding or modifying code in this repository, adhere to the following princi
   - Connect to the real PostgreSQL database and verify HTTP deserialization, validation, SQL constraints, transactions, and persistence.
 
 ### C. Transaction & Connection Pool Invariants
-- **Transaction Boundaries:** Always decorate mutating or data-fetching service/resource methods with `jakarta.transaction.Transactional`.
+- **Transaction Boundaries:** Keep mutating endpoints transactional (for example `TimeResource#getCurrentTime` and `TradeTransactionResource#reportTrade`). Read-only GET endpoints can remain non-transactional unless a transaction is explicitly required.
 - **Automatic Demarcation:** Never manually open, commit, roll back, or close JDBC connections or `EntityManager` sessions. Narayana JTA automatically commits on successful completion, rolls back on uncaught runtime exceptions, releases database locks, and returns the physical connection to the Agroal pool.
 - **Connection Leak Safety:** Agroal is configured with a 10s leak detection interval (`quarkus.datasource.jdbc.leak-detection-interval=10s`) and a 30s default transaction timeout. Keep database transactions concise.
 
@@ -46,6 +47,7 @@ When adding or modifying code in this repository, adhere to the following princi
 - **Modern Schema Management:** Do **not** use the deprecated `quarkus.hibernate-orm.database.generation`. Always use `quarkus.hibernate-orm.schema-management.strategy`.
 - **Container Host Resolution:** Datasource URLs in dev mode use `${DB_HOST:host.containers.internal}` so that services resolve the PostgreSQL container from inside the devcontainer (`host.containers.internal:5432`) and host environments.
 - **Dev Mode Network Binding:** Keep `quarkus.http.host=0.0.0.0` and allow dev-ui hosts via regex (`quarkus.dev-ui.hosts=.*`) to prevent HTTP 403 Forbidden errors when accessing Dev UI across container boundaries.
+- **Load-Test/Prod Metrics Controls:** Keep `quarkus.datasource.metrics.enabled=true` for Agroal metrics at `/q/metrics`, and keep `%prod.quarkus.hibernate-orm.log.sql=false` to avoid SQL logging skewing load-test latency.
 
 ---
 
@@ -58,7 +60,12 @@ When adding or modifying code in this repository, adhere to the following princi
 │   └── docker-compose.yml       # Multi-service compose (app + postgres)
 ├── mvnw, mvnw.cmd, .mvn/         # Maven wrapper files (root level)
 ├── pom.xml                      # Parent POM (declares modules)
-├── load-test/                   # Gatling simulations, loadtest.sh, Containerfiles, Prometheus/Grafana config
+├── load-test/                   # Gatling module (scenarios + infra orchestration + observability)
+│   ├── loadtest.sh              # build/infra/app/reset-db/run/info/down helper
+│   ├── DEVELOPER_GUIDE.md       # Deep architecture and extension guide for load testing
+│   └── src/test/java/cz/rychter/loadtest/
+│       ├── TradeSupport.java    # Shared Gatling payload/protocol/request chains
+│       └── *Simulation.java     # Smoke|Load|Stress|Spike|Soak|PoolExhaustion|DuplicateRace
 └── quarkus-rest-ms/
     ├── pom.xml                  # Microservice dependencies & Quarkus plugin
     ├── src/main/java/cz/rychter/
@@ -118,12 +125,23 @@ java -jar quarkus-rest-ms/target/quarkus-app/quarkus-run.jar
   ```bash
   ./mvnw verify -pl quarkus-rest-ms
   ```
+- **Run root verification across modules (load-test module builds but does not auto-run Gatling scenarios):**
+  ```bash
+  ./mvnw verify
+  ```
 
 ### D. Load Testing (JVM vs Native)
 ```bash
 ./load-test/loadtest.sh build all && ./load-test/loadtest.sh infra
 ./load-test/loadtest.sh app jvm        # or native
 ./load-test/loadtest.sh run Load       # Smoke|Load|Stress|Spike|Soak|PoolExhaustion|DuplicateRace
+./load-test/loadtest.sh reset-db       # truncate trade_transactions between comparable runs
+./load-test/loadtest.sh info           # image/startup/memory quick diagnostics
+./load-test/loadtest.sh down           # remove lt-* containers and loadtest network
+```
+Pass scenario tunables through Maven system properties, for example:
+```bash
+./load-test/loadtest.sh run Load -Drate=200 -DdurationSec=300
 ```
 
 ### E. Managing Podman Infrastructure
