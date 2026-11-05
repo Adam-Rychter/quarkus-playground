@@ -1,6 +1,6 @@
 # testing-java
 
-A dependency-free Java 21 Maven module for experimenting with core Java features. It currently contains a small comparison of platform threads and virtual threads.
+A Java 21 Maven module for experimenting with core Java features. It contains a platform-thread versus virtual-thread comparison and JMH benchmarks for heap allocation.
 
 ## Thread comparison
 
@@ -9,6 +9,28 @@ A dependency-free Java 21 Maven module for experimenting with core Java features
 The benchmark runs 100 trials per thread type. It alternates which type runs first in each round and prints the average elapsed time in milliseconds. Each trial creates new threads, so the timing includes thread creation, scheduling, the workload, and joining—not just the set-building work.
 
 The sets are not retained after their builder method returns; only each set's size is stored. They then become eligible for garbage collection, but collection is not immediate or guaranteed at that point.
+
+### Java Memory Model connection
+
+Each worker writes its result to a distinct element of `generatedSetSizes`, so workers do not race with one another. Starting a thread happens-before actions in that thread, and successfully joining it happens-before the joining thread continues. Therefore, after all joins, the main thread is guaranteed to observe the workers' writes. The benchmark's timing still includes much more than thread scheduling, so it is not an isolated comparison of thread types.
+
+## Heap allocation benchmark
+
+`cz.rychter.testingjava.AllocationBenchmark` uses JMH to compare three workloads at two sizes: a primitive array, an array containing separately allocated records, and a `HashSet` of boxed integers. Results returned from each benchmark are consumed by JMH so the work cannot simply be discarded. Each JMH worker has its own benchmark state (`Scope.Thread`); this measures allocation behavior, not cross-thread visibility.
+
+Build and run the allocation benchmarks from the repository root:
+
+```bash
+./testing-java/src/main/resources/run-allocation-benchmark.sh
+```
+
+In the profiler output, `gc.alloc.rate.norm` reports normalized allocated bytes per operation. Compare workloads at the same `elementCount`; the reported allocation includes their backing arrays, collection nodes/tables, and boxed/object values. It is not the amount of live heap after an operation, nor does it mean the garbage collector immediately reclaims those objects.
+
+Additional JMH arguments can be passed to the script, for example:
+
+```bash
+./testing-java/src/main/resources/run-allocation-benchmark.sh -p elementCount=1000
+```
 
 ## Build and run
 
