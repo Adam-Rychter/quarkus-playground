@@ -2,6 +2,24 @@
 
 A Java 21 Maven module for experimenting with core Java features. It contains a platform-thread versus virtual-thread comparison and JMH benchmarks for heap allocation.
 
+## Thread performance benchmark
+
+`cz.rychter.testingjava.ThreadBenchmark` provides separate JMH benchmark methods for platform-thread-per-task and virtual-thread-per-task runs. Each operation starts a batch of 1, 16, or 64 threads; each worker builds and hashes an identical deterministic `HashSet<Integer>` containing 1,000 or 5,000 values. The bounded parameter sets are intentional: platform threads consume native resources, and this benchmark should not be used to exhaust the host.
+
+Run the complete comparison from the repository root:
+
+```bash
+./testing-java/src/main/resources/run-thread-benchmark.sh
+```
+
+The script builds the shaded JMH jar, records separate JMH JSON results with the GC profiler, and performs a fresh-JVM peak-RSS probe for each parameter pair. It generates `testing-java/THREAD_BENCHMARK_REPORT.md` and preserves raw JMH JSON, RSS data, and probe logs in a timestamped directory under `testing-java/target/thread-benchmark-results/`. Set `THREAD_BENCHMARK_RESULTS_DIR` or `THREAD_BENCHMARK_REPORT` to choose another output location. Additional JMH options apply to the timing runs; for a smoke run, for example:
+
+```bash
+./testing-java/src/main/resources/run-thread-benchmark.sh -wi 0 -i 1 -r 100ms
+```
+
+The report explains the methodology and limitations. JMH's normalized allocation metric is Java heap allocation, not native thread-stack memory. Peak RSS is a whole-process high-water mark and is collected separately in a new JVM per case; it includes JVM and runtime overhead and uses a short measurement, so it is only a coarse process-memory comparison.
+
 ## Thread comparison
 
 `cz.rychter.testingjava.TestingThreads` runs the same workload using platform threads and virtual threads. In each trial, it starts 500 threads; each thread builds a `HashSet` containing 100,000 unique random `Double` values. The trial measures elapsed time from before thread creation until all threads finish and their resulting set sizes are checked.
